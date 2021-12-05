@@ -1,6 +1,6 @@
 import sys
-from PyQt5.QtWidgets import QToolButton, QSizePolicy, QApplication, QMenu, QMenuBar, QWidget, QGridLayout, QVBoxLayout, QLineEdit, QColorDialog, QHBoxLayout, QBoxLayout, QLabel, QPushButton, QToolBar
-from PyQt5.QtGui import QColor
+from PyQt5.QtWidgets import QSlider, QFrame, QGraphicsView, QGraphicsScene, QToolButton, QApplication, QMenu, QMenuBar, QWidget, QVBoxLayout, QLineEdit, QColorDialog, QHBoxLayout, QLabel, QPushButton
+from PyQt5.QtGui import QColor, QPen, QBrush, QIcon
 from PyQt5.QtCore import Qt
 
 default_colors = {
@@ -10,38 +10,58 @@ default_colors = {
 }
 
 
-class GameGrid(QGridLayout):
-    def __init__(self, rows=30, cols=30, **kwargs):
+class GameGrid(QGraphicsView):
+    def __init__(self, width=600, height=600, rows=60, cols=60, **kwargs):
         super().__init__(**kwargs)
-        self.setHorizontalSpacing(0)
-        self.setVerticalSpacing(0)
+        self.width = width
+        self.height = height
+        self.cellSizeX = int(self.height / rows)
+        self.cellSizeY = int(self.width / cols)
 
-        for i in range(rows):
-            for j in range(cols):
-                self.addWidget(GameCell(i, j), i, j)
+        self.scene = QGraphicsScene()
+        self.scene.setSceneRect(0, 0, self.width, self.height)
+
+        self.setBackgroundBrush(QBrush(QColor("black")))
+        self.setFixedSize(self.width, self.height)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setScene(self.scene)
+        self.setFrameStyle(QFrame.NoFrame)
+
+    def eventHandler(self, event):
+        x = int(event.pos().x() / self.cellSizeX) * self.cellSizeX
+        y = int(event.pos().y() / self.cellSizeY) * self.cellSizeY
+        if(event.buttons() == Qt.LeftButton):
+            self.scene.addRect(x, y, self.cellSizeX, self.cellSizeY, QPen(QColor("yellow")), QBrush(QColor("yellow")))
+        elif(event.buttons() == Qt.RightButton):
+            self.scene.addRect(x, y, self.cellSizeX, self.cellSizeY, QPen(QColor("blue")), QBrush(QColor("blue")))
+
+    def mousePressEvent(self, event):
+        self.eventHandler(event)
+        return super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        self.eventHandler(event)
+        return super().mouseMoveEvent(event)
 
 
-class GameCell(QToolButton):
-    def __init__(self, i, j, **kwargs):
-        super().__init__(**kwargs)
-        self._i = i
-        self._j = j
-
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.setMinimumSize(10, 10)
-        self.setMaximumSize(60, 60)
-
-        self.setStyleSheet("background-color: grey;")
-
-        self.clicked.connect(self.handleClick)
-
-    def handleClick(self):
-        print(self._i, self._j)
-
-
-class SimulationPanel(QGridLayout):
+class SimulationPanel(QHBoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self._left = QPushButton(QIcon("./Icons/iconmonstr-arrow-left.svg"), "")
+        self._right = QPushButton(QIcon("./Icons/iconmonstr-arrow-12.svg"), "")
+        self._pause = QPushButton(QIcon("./Icons/iconmonstr-media-control-49.svg"), "")
+        self._play = QPushButton(QIcon("./Icons/iconmonstr-media-control-48.svg"), "")
+        self._speed = QSlider(Qt.Horizontal)
+        self._speed.setMaximumSize(300, 50)
+
+        self.addWidget(self._left)
+        self.addWidget(self._right)
+        self.addWidget(self._pause)
+        self.addWidget(self._play)
+        self.addStretch()
+        self.addWidget(QLabel("Speed:"))
+        self.addWidget(self._speed)
 
 
 class GridSizeInput(QLineEdit):
@@ -55,6 +75,8 @@ class GridSizeInput(QLineEdit):
         self.setMinimumSize(60, 30)
         self.setMaximumSize(60, 30)
 
+        self.setEnabled(False)
+
 
 class ColorButton(QToolButton):
     def __init__(self, name, color, **kwargs):
@@ -64,9 +86,9 @@ class ColorButton(QToolButton):
 
         self.setStyleSheet("background-color: " + self._color)
 
-        self.clicked.connect(self.handleClick)
+        self.clicked.connect(self.handle_click)
 
-    def handleClick(self):
+    def handle_click(self):
         print('Clicked ', self._name)
         new_color = QColorDialog.getColor()
         self.set_color(new_color)
@@ -116,10 +138,11 @@ class App(QApplication):
     def __init__(self, args):
 
         super().__init__(args)
-        self.setStyleSheet('*{font-size: 20px; color: white; background-color: #292929;}')
+        # self.setStyleSheet('*{font-size: 20px; color: white; background-color: #292929;}')
+        self.setStyleSheet('*{font-size: 20px;}')
 
         self._root = QWidget()
-        self._layout = QGridLayout()
+        self._layout = QVBoxLayout()
 
         self._toolbar = QWidget()
         self._toolbar.setLayout(Toolbar())
@@ -127,12 +150,17 @@ class App(QApplication):
         self._config = QWidget()
         self._config.setLayout(ConfigPanel())
 
-        self._game_grid = QWidget()
-        self._game_grid.setLayout(GameGrid())
+        self._game_grid = GameGrid()
+
+        self._simulation_panel = QWidget()
+        self._simulation_panel.setLayout(SimulationPanel())
 
         self._layout.addWidget(self._toolbar)
         self._layout.addWidget(self._config)
+        self._layout.addStretch()
         self._layout.addWidget(self._game_grid)
+        self._layout.setAlignment(self._game_grid, Qt.AlignCenter)
+        self._layout.addWidget(self._simulation_panel)
 
         self._root.setLayout(self._layout)
         self._root.show()
