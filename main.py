@@ -2,6 +2,7 @@ import sys
 from PyQt5.QtWidgets import QSlider, QFrame, QGraphicsView, QGraphicsScene, QToolButton, QApplication, QMenu, QMenuBar, QWidget, QVBoxLayout, QLineEdit, QColorDialog, QHBoxLayout, QLabel, QPushButton
 from PyQt5.QtGui import QColor, QPen, QBrush, QIcon
 from PyQt5.QtCore import Qt
+from model import Checkboard
 
 default_colors = {
     "Alive": QColor("white"),
@@ -10,58 +11,22 @@ default_colors = {
 }
 
 
-class GameGrid(QGraphicsView):
-    def __init__(self, width=600, height=600, rows=60, cols=60, **kwargs):
-        super().__init__(**kwargs)
-        self.width = width
-        self.height = height
-        self.cellSizeX = int(self.height / rows)
-        self.cellSizeY = int(self.width / cols)
-
-        self.scene = QGraphicsScene()
-        self.scene.setSceneRect(0, 0, self.width, self.height)
-
-        self.setBackgroundBrush(QBrush(QColor("black")))
-        self.setFixedSize(self.width, self.height)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setScene(self.scene)
-        self.setFrameStyle(QFrame.NoFrame)
-
-    def eventHandler(self, event):
-        x = int(event.pos().x() / self.cellSizeX) * self.cellSizeX
-        y = int(event.pos().y() / self.cellSizeY) * self.cellSizeY
-        if(event.buttons() == Qt.LeftButton):
-            self.scene.addRect(x, y, self.cellSizeX, self.cellSizeY, QPen(QColor("yellow")), QBrush(QColor("yellow")))
-        elif(event.buttons() == Qt.RightButton):
-            self.scene.addRect(x, y, self.cellSizeX, self.cellSizeY, QPen(QColor("blue")), QBrush(QColor("blue")))
-
-    def mousePressEvent(self, event):
-        self.eventHandler(event)
-        return super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event):
-        self.eventHandler(event)
-        return super().mouseMoveEvent(event)
-
-
-class SimulationPanel(QHBoxLayout):
+class Toolbar(QHBoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._left = QPushButton(QIcon("./Icons/iconmonstr-arrow-left.svg"), "")
-        self._right = QPushButton(QIcon("./Icons/iconmonstr-arrow-12.svg"), "")
-        self._pause = QPushButton(QIcon("./Icons/iconmonstr-media-control-49.svg"), "")
-        self._play = QPushButton(QIcon("./Icons/iconmonstr-media-control-48.svg"), "")
-        self._speed = QSlider(Qt.Horizontal)
-        self._speed.setMaximumSize(300, 50)
+        self._menu_bar = QMenuBar()
+        self._load = QMenu("Load")
+        self._save = QMenu("Save Execution")
+        self._reset = QMenu("Reset")
+        self._quit = QMenu("Quit")
+        self._help = QMenu("Help")
+        self._menu_bar.addMenu(self._load)
+        self._menu_bar.addMenu(self._save)
+        self._menu_bar.addMenu(self._reset)
+        self._menu_bar.addMenu(self._quit)
+        self._menu_bar.addMenu(self._help)
 
-        self.addWidget(self._left)
-        self.addWidget(self._right)
-        self.addWidget(self._pause)
-        self.addWidget(self._play)
-        self.addStretch()
-        self.addWidget(QLabel("Speed:"))
-        self.addWidget(self._speed)
+        self.setMenuBar(self._menu_bar)
 
 
 class GridSizeInput(QLineEdit):
@@ -116,20 +81,83 @@ class ConfigPanel(QHBoxLayout):
             self.addWidget(ColorButton(name=n, color=default_colors[n]), alignment=Qt.AlignLeft)
 
 
-class Toolbar(QHBoxLayout):
-    def __init__(self, **kwargs):
+class GameGrid(QGraphicsView):
+    def __init__(self, checkboard, rows=60, cols=60, width=600, height=600, **kwargs):
         super().__init__(**kwargs)
-        self._menu_bar = QMenuBar()
-        self._load = QMenu("Load")
-        self._save = QMenu("Save Execution")
-        self._quit = QMenu("Quit")
-        self._help = QMenu("Help")
-        self._menu_bar.addMenu(self._load)
-        self._menu_bar.addMenu(self._save)
-        self._menu_bar.addMenu(self._quit)
-        self._menu_bar.addMenu(self._help)
+        self.checkboardModel = checkboard
+        self.checkboardModel.observe(self.renderBoard)
 
-        self.setMenuBar(self._menu_bar)
+        self.width = width
+        self.height = height
+        self.cellSizeX = int(self.height / rows)
+        self.cellSizeY = int(self.width / cols)
+
+        self.scene = QGraphicsScene()
+        self.scene.setSceneRect(0, 0, self.width, self.height)
+
+        self.setBackgroundBrush(QBrush(QColor("black")))
+        self.setFixedSize(self.width, self.height)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setScene(self.scene)
+        self.setFrameStyle(QFrame.NoFrame)
+
+    def eventHandler(self, event):
+        i = int(event.pos().x() / self.cellSizeX)
+        j = int(event.pos().y() / self.cellSizeY)
+        if(event.buttons() == Qt.LeftButton):
+            self.checkboardModel.addCell(i, j)
+        elif(event.buttons() == Qt.RightButton):
+            self.checkboardModel.removeCell(i, j)
+
+    def mousePressEvent(self, event):
+        self.eventHandler(event)
+        return super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        self.eventHandler(event)
+        return super().mouseMoveEvent(event)
+
+    def renderBoard(self):
+        currentBoard = self.checkboardModel.getBoard()
+        self.scene.clear()
+
+        for indexes, cell in currentBoard.items():
+            i = indexes[0]
+            j = indexes[1]
+            color = default_colors[cell.getState()]
+            self.scene.addRect(i * self.cellSizeX, j * self.cellSizeY, self.cellSizeX,
+                               self.cellSizeY, QPen(color), QBrush(color))
+
+
+class SimulationPanel(QHBoxLayout):
+    def __init__(self, checkboard, **kwargs):
+        super().__init__(**kwargs)
+        self.checkboard = checkboard
+        self._left = QPushButton(QIcon("./Icons/iconmonstr-arrow-left.svg"), "")
+        self._left.clicked.connect(self.clickLeft)
+
+        self._right = QPushButton(QIcon("./Icons/iconmonstr-arrow-12.svg"), "")
+        self._right.clicked.connect(self.clickRight)
+
+        self._pause = QPushButton(QIcon("./Icons/iconmonstr-media-control-49.svg"), "")
+        self._play = QPushButton(QIcon("./Icons/iconmonstr-media-control-48.svg"), "")
+        self._speed = QSlider(Qt.Horizontal)
+        self._speed.setMaximumSize(300, 50)
+
+        self.addWidget(self._left)
+        self.addWidget(self._right)
+        self.addWidget(self._pause)
+        self.addWidget(self._play)
+        self.addStretch()
+        self.addWidget(QLabel("Speed:"))
+        self.addWidget(self._speed)
+
+    def clickRight(self):
+        self.checkboard.next()
+
+    def clickLeft(self):
+        self.checkboard.goBack()
 
 
 # The main application.
@@ -140,6 +168,9 @@ class App(QApplication):
         super().__init__(args)
         # self.setStyleSheet('*{font-size: 20px; color: white; background-color: #292929;}')
         self.setStyleSheet('*{font-size: 20px;}')
+        rows = 30
+        cols = 30
+        self._model = Checkboard(rows, cols)
 
         self._root = QWidget()
         self._layout = QVBoxLayout()
@@ -150,10 +181,10 @@ class App(QApplication):
         self._config = QWidget()
         self._config.setLayout(ConfigPanel())
 
-        self._game_grid = GameGrid()
+        self._game_grid = GameGrid(self._model, rows, cols)
 
         self._simulation_panel = QWidget()
-        self._simulation_panel.setLayout(SimulationPanel())
+        self._simulation_panel.setLayout(SimulationPanel(self._model))
 
         self._layout.addWidget(self._toolbar)
         self._layout.addWidget(self._config)
