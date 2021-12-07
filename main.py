@@ -1,26 +1,49 @@
 import sys
-from PyQt5.QtWidgets import QSlider, QFrame, QGraphicsView, QGraphicsScene, QToolButton, QApplication, QMenu, QMenuBar, QWidget, QVBoxLayout, QLineEdit, QColorDialog, QHBoxLayout, QLabel, QPushButton
+from PyQt5.QtWidgets import QAction, QSlider, QFileDialog, QFrame, QGraphicsView, QGraphicsScene, QToolButton, QApplication, QMenu, QMenuBar, QWidget, QVBoxLayout, QLineEdit, QColorDialog, QHBoxLayout, QLabel, QPushButton
 from PyQt5.QtGui import QColor, QPen, QBrush, QIcon, QIntValidator
 from PyQt5.QtCore import Qt
 from model import CheckboardModel
 
 
 class Toolbar(QHBoxLayout):
-    def __init__(self, **kwargs):
+    def __init__(self, model, ** kwargs):
         super().__init__(**kwargs)
+        self.model = model
         self._menu_bar = QMenuBar()
-        self._load = QMenu("Load")
-        self._save = QMenu("Save Execution")
-        self._reset = QMenu("Reset")
-        self._quit = QMenu("Quit")
-        self._help = QMenu("Help")
-        self._menu_bar.addMenu(self._load)
-        self._menu_bar.addMenu(self._save)
-        self._menu_bar.addMenu(self._reset)
-        self._menu_bar.addMenu(self._quit)
+
+        self._file = QMenu("&File")
+        self._menu_bar.addMenu(self._file)
+
+        self._save = QAction(QIcon("./Icons/iconmonstr-save-1.svg"), "Save Game")
+        self._save.triggered.connect(self.saveAction)
+        self._file.addAction(self._save)
+
+        self._load = QAction(QIcon("./Icons/iconmonstr-folder-21.svg"), "Load")
+        self._load.triggered.connect(self.loadAction)
+        self._file.addAction(self._load)
+
+        self._file.addSeparator()
+
+        self._quit = QAction("Quit")
+        self._quit.triggered.connect(self.quitAction)
+        self._file.addAction(self._quit)
+
+        self._help = QMenu("&Help")
+        # self._help.setIcon(QIcon("./Icons/iconmonstr-help-2.svg"))
         self._menu_bar.addMenu(self._help)
 
         self.setMenuBar(self._menu_bar)
+
+    def saveAction(self):
+        file = QFileDialog.getSaveFileName(caption="Save Game", filter="Game of Life (*.gol)")
+        self.model.saveGame(file[0])
+
+    def loadAction(self):
+        file = QFileDialog.getOpenFileName(caption="Load Game", filter="Game of Life (*.gol)")
+        self.model.loadGame(file[0])
+
+    def quitAction(self):
+        print("quit")
 
 
 class ColorButton(QToolButton):
@@ -51,7 +74,7 @@ class ConfigPanel(QHBoxLayout):
         self.gridSizeInput.setMaxLength(3)
         self.gridSizeInput.setMinimumSize(50, 30)
         self.gridSizeInput.setMaximumSize(50, 30)
-        self.gridSizeInput.setValidator(QIntValidator(1, 999))
+        self.gridSizeInput.setValidator(QIntValidator(1, 300))  # Add feedback if too large number
         self.gridSizeInput.returnPressed.connect(self.enterNewGridSize)
 
         self.addWidget(QLabel("Grid Size:"), alignment=Qt.AlignLeft)
@@ -68,7 +91,7 @@ class ConfigPanel(QHBoxLayout):
 
 
 class GameGrid(QGraphicsView):
-    def __init__(self, model, width=600, height=600, **kwargs):
+    def __init__(self, model, width=800, height=800, **kwargs):
         super().__init__(**kwargs)
         self.model = model
         self.model.observeBoard(self.renderBoard)
@@ -127,22 +150,28 @@ class SimulationPanel(QHBoxLayout):
     def __init__(self, model, **kwargs):
         super().__init__(**kwargs)
         self.model = model
+        self.model.observeBoard(self.alignButtonStatus)
 
         self._left = QPushButton(QIcon("./Icons/iconmonstr-arrow-left.svg"), "")
         self._left.clicked.connect(self.clickLeft)
+        self._left.setEnabled(False)
 
         self._right = QPushButton(QIcon("./Icons/iconmonstr-arrow-12.svg"), "")
         self._right.clicked.connect(self.clickRight)
+        self._left.setEnabled(False)
 
         self._pause = QPushButton(QIcon("./Icons/iconmonstr-media-control-49.svg"), "")
+        self._pause.clicked.connect(self.clickPause)
+
         self._play = QPushButton(QIcon("./Icons/iconmonstr-media-control-48.svg"), "")
+        self._play.clicked.connect(self.clickPlay)
 
         self._speed = QSlider(Qt.Horizontal)
         self._speed.setMaximumSize(300, 50)
+        self._speed.setMinimum(1)
+        self._speed.setMaximum(29)
+        self._speed.setValue(self.model.getSpeed())
         self._speed.valueChanged[int].connect(self.sliderModified)
-        self._speed.setMinimum(0)
-        self._speed.setMaximum(20)
-        self._speed.setValue(10)
 
         self.addWidget(self._left)
         self.addWidget(self._right)
@@ -153,13 +182,23 @@ class SimulationPanel(QHBoxLayout):
         self.addWidget(self._speed)
 
     def clickRight(self):
-        self.model.next()
+        self.model.goNext()
 
     def clickLeft(self):
         self.model.goBack()
 
+    def clickPause(self):
+        self.model.pause()
+
+    def clickPlay(self):
+        self.model.play()
+
     def sliderModified(self, value):
         self.model.setSpeed(value)
+
+    def alignButtonStatus(self):
+        self._left.setEnabled(self.model.getLeftEnabled())
+        self._right.setEnabled(self.model.getRightEnabled())
 
 
 # The main application.
@@ -175,7 +214,7 @@ class App(QApplication):
         self._layout = QVBoxLayout()
 
         self._toolbar = QWidget()
-        self._toolbar.setLayout(Toolbar())
+        self._toolbar.setLayout(Toolbar(self._model))
 
         self._config = QWidget()
         self._config.setLayout(ConfigPanel(self._model))

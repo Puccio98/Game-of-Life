@@ -1,5 +1,6 @@
 from PyQt5.QtGui import QColor
-from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt5.QtCore import QObject, pyqtSignal, QTimer
+import pickle
 
 
 class InterfaceColors():
@@ -47,7 +48,25 @@ class CheckboardModel(QObject):
         self.currentIndex = 0
         self.N = N
         self.colors = InterfaceColors()
-        self.speed = 0
+        self.speed = 10
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.next)
+
+    def reset(self):
+        self.boardHistory = []
+        self.boardHistory.append({})
+        self.currentIndex = 0
+        self.boardUpdate.emit()
+
+    def saveGame(self, filename):
+        with open(filename + '.gol', 'wb') as f:
+            pickle.dump(self.boardHistory, f)
+
+    def loadGame(self, filename):
+        with open(filename, 'rb') as f:
+            self.boardHistory = pickle.load(f)
+            self.currentIndex = 0
+            self.boardUpdate.emit()
 
     def observeBoard(self, slot):
         self.boardUpdate.connect(slot)
@@ -74,8 +93,11 @@ class CheckboardModel(QObject):
         return self.N
 
     def setSpeed(self, speed):
-        print(speed)
         self.speed = speed
+        self.play()
+
+    def getSpeed(self):
+        return self.speed
 
     def getBoard(self):
         return self.boardHistory[self.currentIndex]
@@ -131,6 +153,29 @@ class CheckboardModel(QObject):
         if self.currentIndex < 0:
             self.currentIndex = 0
         self.boardUpdate.emit()
+
+    def goNext(self):
+        if self.currentIndex + 1 < len(self.boardHistory):
+            self.currentIndex += 1
+        self.boardUpdate.emit()
+
+    def play(self):
+        self.timer.start(2000 / self.speed)
+
+    def pause(self):
+        self.timer.stop()
+
+    def getLeftEnabled(self):
+        if self.currentIndex == 0:
+            return False
+        else:
+            return True
+
+    def getRightEnabled(self):
+        if self.currentIndex + 1 == len(self.boardHistory):
+            return False
+        else:
+            return True
 
     def _countNeighbors(self, i, j):
         count = 0
