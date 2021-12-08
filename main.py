@@ -1,5 +1,5 @@
 import sys
-from PyQt5.QtWidgets import QAction, QSlider, QFileDialog, QFrame, QGraphicsView, QGraphicsScene, QToolButton, QApplication, QMenu, QMenuBar, QWidget, QVBoxLayout, QLineEdit, QColorDialog, QHBoxLayout, QLabel, QPushButton
+from PyQt5.QtWidgets import QMessageBox, QAction, QSlider, QFileDialog, QFrame, QGraphicsView, QGraphicsScene, QToolButton, QApplication, QMenu, QMenuBar, QWidget, QVBoxLayout, QLineEdit, QColorDialog, QHBoxLayout, QLabel, QPushButton
 from PyQt5.QtGui import QColor, QPen, QBrush, QIcon, QIntValidator
 from PyQt5.QtCore import Qt
 from model import CheckboardModel
@@ -28,9 +28,9 @@ class Toolbar(QHBoxLayout):
         self._quit.triggered.connect(self.quitAction)
         self._file.addAction(self._quit)
 
-        self._help = QMenu("&Help")
-        # self._help.setIcon(QIcon("./Icons/iconmonstr-help-2.svg"))
-        self._menu_bar.addMenu(self._help)
+        self._help = QAction("&Help")
+        self._help.triggered.connect(self.helpDialog)
+        self._menu_bar.addAction(self._help)
 
         self.setMenuBar(self._menu_bar)
 
@@ -43,7 +43,26 @@ class Toolbar(QHBoxLayout):
         self.model.loadGame(file[0])
 
     def quitAction(self):
-        print("quit")
+        QApplication.exit()
+
+    def helpDialog(self):
+        HelpDialog()
+
+
+class HelpDialog(QMessageBox):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Help")
+        # self.setStyleSheet("h2{text-align:center}")
+        self.setMinimumSize(100, 200)
+
+        self.setText("<h2>Conway's Game of Life</h2>")
+        self.setInformativeText("<a href=\"https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life\">Here</a> you can find how the game works." +
+                                "<h3>Commands:</h3>" +
+                                "<li> <b>Left Click:</b> add cells" +
+                                "<li> <b>Right Click:</b> remove cells")
+
+        self.exec_()
 
 
 class ColorButton(QToolButton):
@@ -155,16 +174,24 @@ class SimulationPanel(QHBoxLayout):
         self._left = QPushButton(QIcon("./Icons/iconmonstr-arrow-left.svg"), "")
         self._left.clicked.connect(self.clickLeft)
         self._left.setEnabled(False)
+        self._left.setMinimumSize(40, 30)
 
         self._right = QPushButton(QIcon("./Icons/iconmonstr-arrow-12.svg"), "")
         self._right.clicked.connect(self.clickRight)
-        self._left.setEnabled(False)
+        self._right.setEnabled(False)
+        self._right.setMinimumSize(40, 30)
 
         self._pause = QPushButton(QIcon("./Icons/iconmonstr-media-control-49.svg"), "")
         self._pause.clicked.connect(self.clickPause)
+        self._pause.setMinimumSize(40, 30)
 
         self._play = QPushButton(QIcon("./Icons/iconmonstr-media-control-48.svg"), "")
         self._play.clicked.connect(self.clickPlay)
+        self._play.setMinimumSize(40, 30)
+
+        self._reset = QPushButton("Reset")
+        self._reset.clicked.connect(self.clickReset)
+        self._reset.setMinimumSize(40, 30)
 
         self._speed = QSlider(Qt.Horizontal)
         self._speed.setMaximumSize(300, 50)
@@ -180,6 +207,8 @@ class SimulationPanel(QHBoxLayout):
         self.addStretch()
         self.addWidget(QLabel("Speed:"))
         self.addWidget(self._speed)
+        self.addStretch()
+        self.addWidget(self._reset)
 
     def clickRight(self):
         self.model.goNext()
@@ -192,6 +221,9 @@ class SimulationPanel(QHBoxLayout):
 
     def clickPlay(self):
         self.model.play()
+
+    def clickReset(self):
+        self.model.reset()
 
     def sliderModified(self, value):
         self.model.setSpeed(value)
@@ -234,6 +266,14 @@ class App(QApplication):
         self._root.setLayout(self._layout)
         self._root.show()
         self.exec_()
+
+    def quit(self):
+        self.exit()
+
+
+def Root(QWidget):
+    def __init__(self, **kwargs):
+        pass
 
 
 # Instantiate and run the application.
