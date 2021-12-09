@@ -1,6 +1,8 @@
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import QObject, pyqtSignal, QTimer
 import pickle
+import numpy as np
+from scipy import signal
 
 
 class InterfaceColors():
@@ -41,22 +43,30 @@ class CheckboardModel(QObject):
     colorUpdate = pyqtSignal()
     gridSizeUpdate = pyqtSignal()
 
-    def __init__(self, N):
+    def __init__(self, cellSize, maxRows, maxCols):
         super().__init__()
+        self.maxRows = maxRows
+        self.maxCols = maxCols
         self.boardHistory = []
         self.boardHistory.append({})
         self.currentIndex = 0
-        self.N = N
+        self.cellSize = cellSize
         self.colors = InterfaceColors()
+        self.countMatrix = np.zeros((self.maxRows, self.maxCols))
+
         self.speed = 10
         self.timer = QTimer()
         self.timer.timeout.connect(self.next)
+        self.running = False
 
     def reset(self):
         self.boardHistory = []
         self.boardHistory.append({})
         self.currentIndex = 0
         self.boardUpdate.emit()
+        # self.running = False
+        self.maxX = 0
+        self.maxY = 0
 
     def saveGame(self, filename):
         with open(filename + '.gol', 'wb') as f:
@@ -84,17 +94,18 @@ class CheckboardModel(QObject):
     def getColor(self, key):
         return self.colors.getColor(key)
 
-    def setN(self, N):
-        assert N > 0
-        self.N = N
+    def setCellSize(self, cellSize):
+        assert cellSize > 0
+        self.cellSize = cellSize
         self.gridSizeUpdate.emit()
 
-    def getN(self):
-        return self.N
+    def getCellSize(self):
+        return self.cellSize
 
     def setSpeed(self, speed):
         self.speed = speed
-        self.play()
+        if self.running:
+            self.play()
 
     def getSpeed(self):
         return self.speed
@@ -125,24 +136,31 @@ class CheckboardModel(QObject):
             self.boardHistory = self.boardHistory[0:self.currentIndex + 1]
         updatedBoard = {}
 
-        for i in range(self.N):
-            for j in range(self.N):
-                count = self._countNeighbors(i, j)
+        cn = self.countNeighbors()
+        x, y = np.nonzero(cn)
+        nonZero = set([e for e in zip(x, y)])
+        previous = set(self.boardHistory[self.currentIndex].keys())
+        toBeChecked = nonZero.union(previous)
 
-                if (i, j) in self.boardHistory[self.currentIndex].keys() and self.boardHistory[self.currentIndex][(i, j)].getState() != "Dead":
-                    if count <= 1:
-                        updatedBoard[(i, j)] = self.boardHistory[self.currentIndex][(i, j)].copy()
-                        updatedBoard[(i, j)].setState("Dead")
-                    elif count >= 4:
-                        updatedBoard[(i, j)] = self.boardHistory[self.currentIndex][(i, j)].copy()
-                        updatedBoard[(i, j)].setState("Dead")
-                    else:
-                        updatedBoard[(i, j)] = self.boardHistory[self.currentIndex][(i, j)].copy()
-                        updatedBoard[(i, j)].setState("Alive")
+        for s in toBeChecked:
+            i = s[0]
+            j = s[1]
+            count = cn[i, j]
 
+            if (i, j) in self.boardHistory[self.currentIndex].keys() and self.boardHistory[self.currentIndex][(i, j)].getState() != "Dead":
+                if count <= 1:
+                    updatedBoard[(i, j)] = self.boardHistory[self.currentIndex][(i, j)].copy()
+                    updatedBoard[(i, j)].setState("Dead")
+                elif count >= 4:
+                    updatedBoard[(i, j)] = self.boardHistory[self.currentIndex][(i, j)].copy()
+                    updatedBoard[(i, j)].setState("Dead")
                 else:
-                    if count == 3:
-                        updatedBoard[(i, j)] = Cell(i, j)
+                    updatedBoard[(i, j)] = self.boardHistory[self.currentIndex][(i, j)].copy()
+                    updatedBoard[(i, j)].setState("Alive")
+
+            else:
+                if count == 3:
+                    updatedBoard[(i, j)] = Cell(i, j)
 
         self.boardHistory.append(updatedBoard)
         self.currentIndex += 1
@@ -160,9 +178,11 @@ class CheckboardModel(QObject):
         self.boardUpdate.emit()
 
     def play(self):
-        self.timer.start(2000 / self.speed)
+        self.running = True
+        self.timer.start(1700 / self.speed)
 
     def pause(self):
+        self.running = False
         self.timer.stop()
 
     def getLeftEnabled(self):
@@ -177,13 +197,10 @@ class CheckboardModel(QObject):
         else:
             return True
 
-    def _countNeighbors(self, i, j):
-        count = 0
-        positions = [(i - 1, j - 1), (i - 1, j), (i - 1, j + 1),
-                     (i, j - 1), (i, j + 1),
-                     (i + 1, j - 1), (i + 1, j), (i + 1, j + 1)]
+    def countNeighbors(self):
+        self.countMatrix = np.zeros((self.maxRows, self.maxCols))
+        for key, cell in self.boardHistory[self.currentIndex].items():
+            if cell.getState() != "Dead":
+                self.countMatrix[key[0], key[1]] = 1
 
-        for p in positions:
-            if p in self.boardHistory[self.currentIndex].keys() and self.boardHistory[self.currentIndex][p].getState() != "Dead":
-                count += 1
-        return count
+        return signal.convolve2d(self.countMatrix, [[1, 1, 1], [1, 0, 1], [1, 1, 1]], 'same')

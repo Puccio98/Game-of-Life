@@ -1,5 +1,5 @@
 import sys
-from PyQt5.QtWidgets import QMessageBox, QAction, QSlider, QFileDialog, QFrame, QGraphicsView, QGraphicsScene, QToolButton, QApplication, QMenu, QMenuBar, QWidget, QVBoxLayout, QLineEdit, QColorDialog, QHBoxLayout, QLabel, QPushButton
+from PyQt5.QtWidgets import QSizePolicy, QMessageBox, QAction, QSlider, QFileDialog, QFrame, QGraphicsView, QGraphicsScene, QToolButton, QApplication, QMenu, QMenuBar, QWidget, QVBoxLayout, QLineEdit, QColorDialog, QHBoxLayout, QLabel, QPushButton
 from PyQt5.QtGui import QColor, QPen, QBrush, QIcon, QIntValidator
 from PyQt5.QtCore import Qt
 from model import CheckboardModel
@@ -57,10 +57,10 @@ class HelpDialog(QMessageBox):
         self.setMinimumSize(100, 200)
 
         self.setText("<h2>Conway's Game of Life</h2>")
-        self.setInformativeText("<a href=\"https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life\">Here</a> you can find how the game works." +
-                                "<h3>Commands:</h3>" +
-                                "<li> <b>Left Click:</b> add cells" +
-                                "<li> <b>Right Click:</b> remove cells")
+        self.setInformativeText("<a href=\"https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life\">Here</a> you can find how the game works."
+                                + "<h3>Commands:</h3>"
+                                + "<li> <b>Left Click:</b> add cells"
+                                + "<li> <b>Right Click:</b> remove cells")
 
         self.exec_()
 
@@ -89,15 +89,15 @@ class ConfigPanel(QHBoxLayout):
         super().__init__(**kwargs)
         self.model = model
 
-        self.gridSizeInput = QLineEdit(str(self.model.getN()))
-        self.gridSizeInput.setMaxLength(3)
-        self.gridSizeInput.setMinimumSize(50, 30)
-        self.gridSizeInput.setMaximumSize(50, 30)
-        self.gridSizeInput.setValidator(QIntValidator(1, 300))  # Add feedback if too large number
-        self.gridSizeInput.returnPressed.connect(self.enterNewGridSize)
+        self.cellSizeInput = QLineEdit(str(self.model.getCellSize()))
+        self.cellSizeInput.setMaxLength(3)
+        self.cellSizeInput.setMinimumSize(50, 30)
+        self.cellSizeInput.setMaximumSize(50, 30)
+        self.cellSizeInput.setValidator(QIntValidator(5, 100))
+        self.cellSizeInput.returnPressed.connect(self.enterNewCellSize)
 
-        self.addWidget(QLabel("Grid Size:"), alignment=Qt.AlignLeft)
-        self.addWidget(self.gridSizeInput, alignment=Qt.AlignLeft)
+        self.addWidget(QLabel("Cell Size:"), alignment=Qt.AlignLeft)
+        self.addWidget(self.cellSizeInput, alignment=Qt.AlignLeft)
         self.addStretch()
 
         color_controllers_names = ["Alive", "Dead", "Born"]
@@ -105,12 +105,12 @@ class ConfigPanel(QHBoxLayout):
             self.addWidget(QLabel(n + ":"), alignment=Qt.AlignRight)
             self.addWidget(ColorButton(name=n, model=self.model), alignment=Qt.AlignLeft)
 
-    def enterNewGridSize(self):
-        self.model.setN(int(self.gridSizeInput.text()))
+    def enterNewCellSize(self):
+        self.model.setCellSize(int(self.cellSizeInput.text()))
 
 
 class GameGrid(QGraphicsView):
-    def __init__(self, model, width=800, height=800, **kwargs):
+    def __init__(self, model, width=1400, height=800, **kwargs):
         super().__init__(**kwargs)
         self.model = model
         self.model.observeBoard(self.renderBoard)
@@ -119,19 +119,23 @@ class GameGrid(QGraphicsView):
 
         self.width = width
         self.height = height
-        self.cellSize = int(self.height / self.model.getN())
+        self.cellSize = self.model.getCellSize()
 
         self.scene = QGraphicsScene()
         self.scene.setSceneRect(0, 0, self.width, self.height)
         self.scene.setBackgroundBrush(QBrush(QColor("black")))
 
-        self.setFixedSize(self.width, self.height)
+        # self.setFixedSize(self.width, self.height)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setScene(self.scene)
         self.setFrameStyle(QFrame.NoFrame)
 
         self.renderBoard()
+
+    def scrollContentsBy(self, dx, dy):
+        pass
 
     def eventHandler(self, event):
         i = int(event.pos().x() / self.cellSize)
@@ -156,20 +160,22 @@ class GameGrid(QGraphicsView):
         for indexes, cell in currentBoard.items():
             i = indexes[0]
             j = indexes[1]
+            pos = self.mapToScene(i * self.cellSize, j * self.cellSize)
             color = self.model.getColor(cell.getState())
-            self.scene.addRect(i * self.cellSize, j * self.cellSize, self.cellSize,
+            self.scene.addRect(pos.x(), pos.y(), self.cellSize,
                                self.cellSize, QPen(color), QBrush(color))
 
     def changeSizes(self):
-        self.cellSize = int(self.height / self.model.getN())
+        self.cellSize = self.model.getCellSize()
         self.renderBoard()
 
 
 class SimulationPanel(QHBoxLayout):
     def __init__(self, model, **kwargs):
         super().__init__(**kwargs)
+
         self.model = model
-        self.model.observeBoard(self.alignButtonStatus)
+        self.model.observeBoard(self.alignArrowStatus)
 
         self._left = QPushButton(QIcon("./Icons/iconmonstr-arrow-left.svg"), "")
         self._left.clicked.connect(self.clickLeft)
@@ -183,6 +189,7 @@ class SimulationPanel(QHBoxLayout):
 
         self._pause = QPushButton(QIcon("./Icons/iconmonstr-media-control-49.svg"), "")
         self._pause.clicked.connect(self.clickPause)
+        self._pause.setEnabled(False)
         self._pause.setMinimumSize(40, 30)
 
         self._play = QPushButton(QIcon("./Icons/iconmonstr-media-control-48.svg"), "")
@@ -218,17 +225,22 @@ class SimulationPanel(QHBoxLayout):
 
     def clickPause(self):
         self.model.pause()
+        self._pause.setEnabled(False)
+        self._play.setEnabled(True)
 
     def clickPlay(self):
         self.model.play()
+        self._play.setEnabled(False)
+        self._pause.setEnabled(True)
 
     def clickReset(self):
+        self.clickPause()
         self.model.reset()
 
     def sliderModified(self, value):
         self.model.setSpeed(value)
 
-    def alignButtonStatus(self):
+    def alignArrowStatus(self):
         self._left.setEnabled(self.model.getLeftEnabled())
         self._right.setEnabled(self.model.getRightEnabled())
 
@@ -239,8 +251,9 @@ class App(QApplication):
     def __init__(self, args):
 
         super().__init__(args)
-        self.setStyleSheet('*{font-size: 20px;}')
-        self._model = CheckboardModel(N=50)
+        self.setStyleSheet("*{font-size: 20px;} \n QPushButton:enabled{background-color: #d3d3d3;} \n QPushButton:disabled{background-color: white;}")
+
+        self._model = CheckboardModel(cellSize=15, maxCols=170, maxRows=290)
 
         self._root = QWidget()
         self._layout = QVBoxLayout()
