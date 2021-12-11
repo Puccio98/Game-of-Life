@@ -5,12 +5,11 @@ import numpy as np
 from scipy import signal
 
 
-class InterfaceColors():
+class GameColors():
     def __init__(self):
         self.colors = {"Alive": QColor("white"),
                        "Dead": QColor("red"),
-                       "Born": QColor("blue")
-                       }
+                       "Born": QColor("blue")}
 
     def setColor(self, key, value):
         assert key in self.colors.keys() and type(value) == QColor
@@ -43,7 +42,7 @@ class CheckboardModel(QObject):
     colorUpdate = pyqtSignal()
     gridSizeUpdate = pyqtSignal()
 
-    def __init__(self, cellSize, maxRows, maxCols):
+    def __init__(self, cellSize=15, maxCols=170, maxRows=290):
         super().__init__()
         self.maxRows = maxRows
         self.maxCols = maxCols
@@ -51,7 +50,7 @@ class CheckboardModel(QObject):
         self.boardHistory.append({})
         self.currentIndex = 0
         self.cellSize = cellSize
-        self.colors = InterfaceColors()
+        self.colors = GameColors()
         self.countMatrix = np.zeros((self.maxRows, self.maxCols))
 
         self.speed = 10
@@ -198,7 +197,7 @@ class CheckboardModel(QObject):
             return True
 
     def countNeighbors(self):
-        self.countMatrix = np.zeros((self.maxRows, self.maxCols))
+        self.countMatrix = self.countMatrix * 0
         for key, cell in self.boardHistory[self.currentIndex].items():
             if cell.getState() != "Dead":
                 self.countMatrix[key[0], key[1]] = 1
