@@ -3,7 +3,7 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt
 
 
-# 3) SimulationPanel()
+# 4) SimulationPanel()
 class SimulationPanel(QHBoxLayout):
     def __init__(self, model, **kwargs):
         super().__init__(**kwargs)

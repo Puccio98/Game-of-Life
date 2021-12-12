@@ -10,7 +10,7 @@ from gui.SimulationPanel import SimulationPanel
 
 
 class App(QApplication):
-    """ The main application: creates both the model and the view&controllers.
+    """ The main application: creates both the model and the view+controllers.
 
     The app U.I. consists of four parts:
     1) Toolbar()             contains load/save/help functions (on top)

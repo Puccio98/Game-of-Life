@@ -40,18 +40,19 @@ class Cell():
 class CheckboardModel(QObject):
     boardUpdate = pyqtSignal()
     colorUpdate = pyqtSignal()
-    gridSizeUpdate = pyqtSignal()
+    cellSizeUpdate = pyqtSignal()
 
-    def __init__(self, cellSize=15, maxCols=170, maxRows=290):
+    def __init__(self, cellSize=15, maxX=370, maxY=220):
         super().__init__()
-        self.maxRows = maxRows
-        self.maxCols = maxCols
+        self.maxX = maxX
+        self.maxY = maxY
         self.boardHistory = []
         self.boardHistory.append({})
         self.currentIndex = 0
         self.cellSize = cellSize
         self.colors = GameColors()
-        self.countMatrix = np.zeros((self.maxRows, self.maxCols))
+        self.countMatrix = np.zeros((self.maxX, self.maxY))
+        print(self.countMatrix.shape)
 
         self.speed = 10
         self.timer = QTimer()
@@ -83,8 +84,8 @@ class CheckboardModel(QObject):
     def observeColor(self, slot):
         self.colorUpdate.connect(slot)
 
-    def observeGridSize(self, slot):
-        self.gridSizeUpdate.connect(slot)
+    def observeCellSize(self, slot):
+        self.cellSizeUpdate.connect(slot)
 
     def setColor(self, key, value):
         self.colors.setColor(key, value)
@@ -96,7 +97,7 @@ class CheckboardModel(QObject):
     def setCellSize(self, cellSize):
         assert cellSize > 0
         self.cellSize = cellSize
-        self.gridSizeUpdate.emit()
+        self.cellSizeUpdate.emit()
 
     def getCellSize(self):
         return self.cellSize
@@ -135,8 +136,8 @@ class CheckboardModel(QObject):
             self.boardHistory = self.boardHistory[0:self.currentIndex + 1]
         updatedBoard = {}
 
-        cn = self.countNeighbors()
-        x, y = np.nonzero(cn)
+        cm = self.countNeighbors()
+        x, y = np.nonzero(cm)
         nonZero = set([e for e in zip(x, y)])
         previous = set(self.boardHistory[self.currentIndex].keys())
         toBeChecked = nonZero.union(previous)
@@ -144,7 +145,7 @@ class CheckboardModel(QObject):
         for s in toBeChecked:
             i = s[0]
             j = s[1]
-            count = cn[i, j]
+            count = cm[i, j]
 
             if (i, j) in self.boardHistory[self.currentIndex].keys() and self.boardHistory[self.currentIndex][(i, j)].getState() != "Dead":
                 if count <= 1:
@@ -199,7 +200,8 @@ class CheckboardModel(QObject):
     def countNeighbors(self):
         self.countMatrix = self.countMatrix * 0
         for key, cell in self.boardHistory[self.currentIndex].items():
-            if cell.getState() != "Dead":
+            if cell.getState() != "Dead" and key[0] < self.maxX and key[1] < self.maxY:
+                print(key)
                 self.countMatrix[key[0], key[1]] = 1
 
         return signal.convolve2d(self.countMatrix, [[1, 1, 1], [1, 0, 1], [1, 1, 1]], 'same')

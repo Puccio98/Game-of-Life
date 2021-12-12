@@ -61,7 +61,7 @@ class Toolbar(QHBoxLayout):
 
 
 class HelpDialog(QMessageBox):
-    """HelpDialog: dialog with Game of Life wiki link and base commands of this implementation"""
+    """HelpDialog: dialog with Game of Life wiki link and the commands of this implementation"""
 
     def __init__(self):
         """ Creates the the help dialog and its content """
