@@ -4,7 +4,8 @@ from PyQt5.QtGui import QIcon
 
 # 1) Toolbar()
 class Toolbar(QHBoxLayout):
-    """ Toolbar: presents the user the save, load and help funtionalities
+    """
+    Toolbar: presents the user the save, load and help funtionalities
 
     Parameters:
     model (CheckboardModel): the model, in order to make use of primitives to save/load Games
@@ -61,7 +62,9 @@ class Toolbar(QHBoxLayout):
 
 
 class HelpDialog(QMessageBox):
-    """HelpDialog: dialog with Game of Life wiki link and the commands of this implementation"""
+    """
+    HelpDialog: dialog with Game of Life wiki link and the commands of this implementation
+    """
 
     def __init__(self):
         """ Creates the the help dialog and its content """

@@ -5,7 +5,8 @@ from PyQt5.QtCore import Qt
 
 # 3) GameGrid()
 class GameGrid(QGraphicsView):
-    """ GameGrid: presents the user the game rendering (the View) and the add/remove cell functionalities
+    """
+    GameGrid: presents the user the game rendering (the View) and the add/remove cell functionalities
 
     Parameters:
     model  (CheckboardModel): the model, in order to make use of primitives to modify Cell Size and Game Colors
@@ -70,7 +71,7 @@ class GameGrid(QGraphicsView):
         """We get from the model the board to be rendered as a dict:
         if (i, j) is a key, currentBoard[(i, j)] holds the cell and its status,
         otherwise the position (i, j) is empty.
-        We get the colors from the Model based on the state of the cell, as we need those for the rendering.
+        We get the colors from the Model, based on the state of the cell, as we need those for the rendering.
         """
         currentBoard = self.model.getBoard()
         self.scene.clear()
@@ -79,7 +80,7 @@ class GameGrid(QGraphicsView):
             i = indexes[0]
             j = indexes[1]
             pos = self.mapToScene(i * self.cellSize, j * self.cellSize)
-            color = self.model.getColor(cell.getState())
+            color = self.model.getColor(cell.getState())  # get color from the model, based on cell state
             self.scene.addRect(pos.x(), pos.y(), self.cellSize,
                                self.cellSize, QPen(color), QBrush(color))  # each cell is represented as square
 

@@ -2,21 +2,22 @@ import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout
 from PyQt5.QtCore import Qt
 
-from Model import CheckboardModel
-from gui.Toolbar import Toolbar
-from gui.ConfigPanel import ConfigPanel
-from gui.GameGrid import GameGrid
-from gui.SimulationPanel import SimulationPanel
+from Model.CheckboardModel import CheckboardModel
+from UserInterface.Toolbar import Toolbar
+from UserInterface.ConfigPanel import ConfigPanel
+from UserInterface.GameGrid import GameGrid
+from UserInterface.SimulationPanel import SimulationPanel
 
 
 class App(QApplication):
-    """ The main application: creates both the model and the view+controllers.
+    """
+    The main application: creates both the model and the view+controllers.
 
     The app U.I. consists of four parts:
     1) Toolbar()             contains load/save/help functions (on top)
-    2) ConfigPanel()         to manage Cell Size and Interface Colors
-    3) GameGrid()            the grid where the Game of Life is displayed
-    4) SimulationPanel()     contains the controllers for the game: play/pause/back/next/speed/reset
+    2) ConfigPanel()         to manage Cell Size and Interface Colors (right below the Toolbar)
+    3) GameGrid()            the grid where the Game of Life is displayed (in the center)
+    4) SimulationPanel()     contains the controllers for the game: play/pause/back/next/speed/reset (under the GameGrid)
 
     All the data needed for the app to run are stored into CheckboardModel() class, which is connected to the all 4 components.
 
@@ -64,10 +65,6 @@ class App(QApplication):
         self._root.setLayout(self._layout)
         self._root.show()
         self.exec_()  # Runs the app
-
-    def quit(self):
-        """Called when quit button is pressed"""
-        self.exit()
 
 
 # Instantiate and run the application.
