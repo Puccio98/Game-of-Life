@@ -6,7 +6,7 @@ from PyQt5.QtCore import Qt
 # 2) ConfigPanel
 class ConfigPanel(QHBoxLayout):
     """
-    Toolbar: presents the user Cell Size modification functionality and custom Game Color functionalities
+    ConfigPanel: presents the user Cell Size modification functionality and custom Game Color functionalities
 
     Parameters:
     model (CheckboardModel): the model, in order to make use of primitives to modify Cell Size and Game Colors
