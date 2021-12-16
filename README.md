@@ -70,6 +70,11 @@ The layout is responsive to window resize:
 
 <img src="https://github.com/Puccio98/Game-of-Life/blob/main/Images/adaptive.gif" alt="Responsive Layout" data-load="full" style="width:50%;">
 
+##### Available Games
+In the `./Games` folder some well known Game of Life configurations are available:
+- Gosper Glider Gun 
+- Copperhead Spaceship
+- Spiral
 
 ## Game Example
 <img src="https://github.com/Puccio98/Game-of-Life/blob/main/Images/gol.gif" alt="Game Example" data-load="full">
