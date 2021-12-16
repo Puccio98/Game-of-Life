@@ -17,14 +17,16 @@ This figure illustrates the rules for cell death, survival, and birth:
 
 
 ## Implementation
-The implementation is done in Python, making use of the MVC architectural pattern.
-PyQt5 is used for the GUI realization. 
+The implementation is done in Python, making use of the MVC architectural pattern together with Observer.
+PyQt5 is used for the GUI realization whilst Numpy and Scipy are used to perform the update computations on the game board.
 
 #### The Model
 The model is implemented in the `CheckboardModel` class: there we hold the state of the game, the methods to manage the state and the logic to update the view.  
-The current state is represented as a dictionary where the keys are tuples (i,j) and the values are `Cell`: if the key (i,j) exists then such position is occupied by a `Cell` of a certain state (either "Alive","Dead" or "Born").
+The current state is represented as a dictionary where the keys are tuples (i,j) and the values are `Cell`: if the key (i,j) exists then such position is occupied by a `Cell` of a certain state (either `"Alive"`, `"Dead"` or `"Born"`).
 
-In order to track the status of the game through time we make use of a list `boardHistory`, which holds all the state dictionaries that were built, so that we're ablet to navigate the steps the game has gone through.
+In order to track the status of the game through time we make use of a list named `boardHistory`, which holds all the state dictionaries that were built, so that we're able to navigate the steps the game has gone through. 
+
+The game loop is managed as well in the `CheckboardModel` class: through the use of a `QTimer` we periodically call the `.next()` method, which computes the next board based on the current state, then notifies the View. 
     
 
 #### The Gui
