@@ -13,6 +13,26 @@ The game is played on a two-dimensional grid (or board). Each grid location is e
 5. All updates are performed simultaneously **in parallel**.
 
 This figure illustrates the rules for cell death, survival, and birth:
+![GoL Rules](./Images/rules.png?raw=true)
+
+
+## Implementation
+The implementation is done in Python, making use of the MVC architectural pattern.
+PyQt5 is used for the GUI realization. 
+
+#### The Model
+The model is implemented in the `CheckboardModel` class: there we hold the state of the game, the methods to manage the state and the logic to update the view.  
+The current state is represented as a dictionary where the keys are tuples (i,j) and the values are `Cell`: if the key (i,j) exists then such position is occupied by a `Cell` of a certain state (either "Alive","Dead" or "Born").
+
+In order to track the status of the game through time we make use of a list `boardHistory`, which holds all the state dictionaries that were built, so that we're ablet to navigate the steps the game has gone through.
+    
+
+#### The Gui
+
+## Functionality
+
+## Game Example
+<img src="https://github.com/Puccio98/Game-of-Life/blob/main/Images/gol.gif" alt="Game Example" data-load="full">
 
 ## Credits
 - Icons taken by [iconmonstr](https://iconmonstr.com/).
